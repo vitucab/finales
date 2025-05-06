@@ -46,7 +46,7 @@ class Videojuego : public Producto {
     private:
         vector<Parche*>parches;
     public:
-        Juego(const char* nomb, const char* des, float pesos, int nro): Producto(nomb, des, pesos, nro) {}
+    Videojuego(const char* nomb, const char* des, float pesos, int nro): Producto(nomb, des, pesos, nro) {}
         void addParche(Parche* nuevo){
             parches.push_back(nuevo);
         }
@@ -120,12 +120,12 @@ class Gestor {
                     games.push_back(vj);
                 }
             }
-            sort(games.begin(), games.end(), [](const auto& a, const auto b){return a->getCosto() > b->getCosto();});
+            sort(games.begin(), games.end(), [](const auto& a, const auto& b){return a->getCosto() > b->getCosto();});
             float aux = games[0]->getCosto();
             int cont = 0;
             for(const auto g : games) {
-                if(aux == p->getCosto()){
-                    cout<<p-getTitulo()<<endl;
+                if(aux == g->getCosto()){
+                    cout<<g-getTitulo()<<endl;
                     cont++;
                 }
             }
@@ -143,12 +143,12 @@ class Gestor {
                     games.push_back(vj);
                 }
             }
-            sort(games.begin(), games.end(), [](const auto& a, const auto b){return a->getParches().size() > b->getParches().size();});
+            sort(games.begin(), games.end(), [](const auto& a, const auto& b){return a->getParches().size() > b->getParches().size();});
             float aux = games[0]->getParches().size();
             int cont = 0;
             for(const auto g : games) {
-                if(aux == p->getParches().size()){
-                    cout<<p-getTitulo()<<endl;
+                if(aux == g->getParches().size()){
+                    cout<<g-getTitulo()<<endl;
                     cont++;
                 }
             }
