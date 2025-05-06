@@ -100,6 +100,7 @@ class Gestor {
                 id = p->getId();
                 archivo.write(reinterpret_cast<const char*>(&id), sizeof(int));
             }
+            archivo.close();
         }
         void guardarTodo(string dirP, string dirI, string dirR){
             if(platubis.empty()){
