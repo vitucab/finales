@@ -10,7 +10,9 @@ class Comida {
         int id;
     
     public:
-        Comida(const char* nomb, int nro) : id(nro) {strcpy(nombre,nomb);}
+        Comida(const char* nomb, int nro) : id(nro) {
+            strcpy(nombre,nomb);
+        }
         int getId() {
             return id;
         }
