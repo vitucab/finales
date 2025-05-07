@@ -10,6 +10,7 @@ class Producto {
         char descrip[200];
         float costo;
         int id;
+        vector<Parche*>parches;
     public:
         Producto(const char* nomb, const char* des, float pesos, int nro) : costo(pesos), id(nro){
             strcpy(titulo, nomb);
@@ -24,34 +25,27 @@ class Producto {
         float getCosto() {
             return costo;
         }
-        int getId() {
-            return id;
+        virtual bool esVideojuego() const = 0;
+};
+
+class Videojuego : public Producto {
+    public:
+    Videojuego(const char* nomb, const char* des, float pesos, int nro): Producto(nomb, des, pesos, nro) {}
+        bool esVideojuego() const override {
+            return true;
         }
 };
 
 class Parche : public Producto {
     private:
-        vector<Producto*>dependencias;
+        Producto* padre;
     public:
         Parche(const char* nomb, const char* des, float pesos, int nro): Producto(nomb, des, pesos, nro) {}
-        void addDependencia(Producto* nuevo) {
-            dependencias.push_back(nuevo);
+        Producto* getPadre() {
+            return padre;
         }
-        vector<Producto*> getDependencias() {
-            return dependencias;
-        }
-};
-
-class Videojuego : public Producto {
-    private:
-        vector<Parche*>parches;
-    public:
-    Videojuego(const char* nomb, const char* des, float pesos, int nro): Producto(nomb, des, pesos, nro) {}
-        void addParche(Parche* nuevo){
-            parches.push_back(nuevo);
-        }
-        vector<Parche*> getParches() {
-            return parches;
+        bool esVideojuego() const override {
+            return false;
         }
 };
 
@@ -59,55 +53,35 @@ class Gestor {
     private:
         vector<Producto*>productos;
     public:
-        void addProducto(Producto* nuevo) {
+        void addVideojuego(Videojuego* nuevo) {
             productos.push_back(nuevo);
         }
-        void guardarProducto(string dirP, Producto* prod){
-            ofstream archivo (dirP, ios::binary | ios::app);
-            if(archivo.fail()){
-                return;
-            }
-            int id = prod->getId();
-            archivo.write(reinterpret_cast<const char*>(&id), sizeof(int));
-            int tam = strlen(prod->getTitulo()) +1 ;
-            archivo.write(reinterpret_cast<const char*>(&tam), sizeof(int));
-            archivo.write(prod->getTitulo(), tam);
-            tam = strlen(prod->getDescrip()) +1 ;
-            archivo.write(reinterpret_cast<const char*>(&tam), sizeof(int));
-            archivo.write(prod->getDescrip(), tam);
-            float costo = prod->getCosto();
-            archivo.write(reinterpret_cast<const char*>(&costo), sizeof(float));
-            archivo.close();
+        void addParche(Parche* nuevo) {
+            productos.push_back(nuevo);
+            nuevo->getPadre()->addParche(nuevo);
         }
-        void guardarRelacion(string dirR, Producto* parchesito){
-            ofstream archivo (dirR, ios::binary | ios::app);
+        void guardarBinario(string dir){
+            ofstream archivo (dir, ios::binary | ios::app);
             if(archivo.fail()){
                 return;
             }
-            Parche* parche = dynamic_cast<Parche*>(parchesito);
-            int id = parche->getId();
-            archivo.write(reinterpret_cast<const char*>(&id), sizeof(int));
-            int cant = parche->getDependencias().size();
-            archivo.write(reinterpret_cast<const char*>(&cant), sizeof(int));
-            for(const auto p : parche->getDependencias()){
-                id = p->getId();
+            for(const auto& p : productos) {
+                int id = p->getId();
                 archivo.write(reinterpret_cast<const char*>(&id), sizeof(int));
-            }
-            archivo.close();
-        }
-        void guardarTodo(string dirVJ, string dirPar, string dirR, string dirDep){
-            if(productos.empty()){
-                return;
-            }
-            for(const auto& p : productos){
-                if(dynamic_cast<Videojuego*>(p)){
-                    guardarProducto(dirVJ, p);
-                    guardarRelacion(dirR, p);
-                } else {
-                    guardarProducto(dirPar, p);
-                    guardarRelacion(dirDep, p);
+                int tam = strlen(prod->getTitulo()) +1 ;
+                archivo.write(reinterpret_cast<const char*>(&tam), sizeof(int));
+                archivo.write(prod->getTitulo(), tam);
+                tam = strlen(prod->getDescrip()) +1 ;
+                archivo.write(reinterpret_cast<const char*>(&tam), sizeof(int));
+                archivo.write(prod->getDescrip(), tam);
+                float costo = prod->getCosto();
+                archivo.write(reinterpret_cast<const char*>(&costo), sizeof(float));
+                if(!p->esVideojuego()){
+                    int idPadre = dynamic_cast<Parche*>(p)->getPadre()->getId();
+                    archivo.write(reinterpret_cast<const char*>(&idPadre), sizeof(int));
                 }
             }
+            archivo.close();
         }
         vector<Videojuego*> vjMasCaros() {
             if(productos.empty()){
