@@ -4,7 +4,6 @@
 #include <cstring>
 #include <vector>
 #include <map>
-
 using namespace std;
 
 class Alumno {
@@ -13,166 +12,166 @@ class Alumno {
         char nya[100];
         vector<int> notas;
     public:
-        Alumno(int codigo,  char* ayn, vector<int> nott) : cod(codigo), notas(nott) {
+        Alumno(int codigo, const char* ayn) : cod(codigo) {
             strcpy(nya, ayn);
         };
-        virtual const char* getTipo() = 0;
-		char* getNya() {
+		const char* getNya() {
 			return nya;
 		}
         int getCod() {
 			return cod;
 		}
-        virtual bool checkAprobo() = 0;
-        int calcularProm();
+        int calcularProm() {
+            int aux = 0;
+            for (const auto& nota : notas) {
+                aux+=nota;
+            }
+            return aux/notas.size();
+        }
+        virtual bool checkAprobo() = 0; 
+        virtual const char* getTipo() = 0;
+        virtual void cargarNotas(vector<int> nota) = 0;
         vector<int> getNotas() {
             return notas;
         }
 };
 
-int Alumno::calcularProm() {
-    int aux = 0;
-    for ( auto& nota : notas) {
-        aux+=nota;
-    }
-    return aux/notas.size();
-}
-
 class Invitado : public Alumno {
     public:
-        Invitado(int codigo,  char* ayn, vector<int> nott) : Alumno(codigo, ayn, nott) {};
+        Invitado(int codigo,  char* ayn) : Alumno(codigo, ayn) {};
         const char* getTipo() override {
             return "invitado";
         }
-        bool checkAprobo();
+        void cargarNotas(vector<int> nota){
+            if(nota.size() == 1) {
+                notas.push_back(nota[0]);
+            }
+        }
+        bool checkAprobo(){
+            return notas.size() == 1 && calcularProm()>60;
+        }
 };
-
-bool Invitado::checkAprobo()  {
-    return notas.size() == 1 && calcularProm()>60;
-}
 
 class Medio : public Alumno {
     public:
-        Medio(int codigo,  char* ayn, vector<int> nott) : Alumno(codigo, ayn, nott) {};
+        Medio(int codigo,  char* ayn) : Alumno(codigo, ayn) {};
         const char* getTipo() override {
             return "medio";
         }
-         bool checkAprobo()  override;
+        void cargarNotas(vector<int> nota){
+		    if(nota.size() == 3){
+			    notas.push_back(nota[0]);
+			    notas.push_back(nota[1]);
+			    notas.push_back(nota[2]);
+	        }
+        }
+        bool checkAprobo() {
+            return notas.size() == 3 && calcularProm()>70;
+        }
 };
-
-bool Medio::checkAprobo()  {
-    return notas.size() == 3 && calcularProm()>70;
-}
 
 class Premium : public Alumno {
     public:
-        Premium(int codigo,  char* ayn, vector<int> nott) : Alumno(codigo, ayn, nott) {};
+        Premium(int codigo,  char* ayn) : Alumno(codigo, ayn) {};
         const char* getTipo() override {
             return "premium";
         }
-        bool checkAprobo()  override;
-};
-
-bool Premium::checkAprobo()  {
-    if(notas.size()<5) {
-        return false;
-    }
-    for ( auto& nota : notas) {
-        if ( nota <= 70 ) {
-            return false;
+        void cargarNotas(vector<int> nota){
+		    if(nota.size() == 5){
+			    notas.push_back(nota[0]);
+			    notas.push_back(nota[1]);
+			    notas.push_back(nota[2]);
+			    notas.push_back(nota[3]);
+			    notas.push_back(nota[4]);
+		    }
         }
-    }
-    return calcularProm()>80;
-}
+        bool checkAprobo() {
+            if(notas.size()<5) {
+                return false;
+            }
+            for ( auto& nota : notas) {
+                if ( nota <= 70 ) {
+                    return false;
+                }
+            }
+            return calcularProm()>80;
+        }
+};
 
 class CursoSys {
     protected:
         vector<Alumno*> alumnos;
     public:
         CursoSys() {};
-        void addAlumno(Alumno* a);
-        void guardarAlumno(char* NombA);
-        vector<Alumno*> addAprobo();
-        void cambiarPlan(Alumno& al,  char* plan);
-        vector<Alumno*> getAlumnoMejorProm();
-        map<string,int> getCantAlumnosXTipo();
+        void addAlumno(Alumno* a) {
+            alumnos.push_back(a);
+        }
+        void guardarAlumno(const char* NombA) {
+            ofstream archivo;
+            archivo.open(NombA,ios::binary | ios::app);
+            if(archivo.fail()){
+                return;
+            }
+            for (const auto& a : alumnos ) {
+                archivo.write(a->getTipo(), strlen(a->getTipo()) +1);
+                archivo.write(reinterpret_cast<char*>(a->getCod()), sizeof(a->getCod()));
+                archivo.write(a->getNya(),sizeof(a->getNya()));
+                ////
+                //OPCIONAL, DICE LA CANTIDAD DE NOTAS QUE HAY DEPENDIEDO EL TIPO DEL ALUMNO
+                if(strcmp(a->getTipo(), "invitado") == 0 ) {
+                    archivo.write(reinterpret_cast<char*>(1), sizeof(1));
+                } else if (strcmp(a->getTipo(), "medio") == 0) {
+                    archivo.write(reinterpret_cast<char*>(3), sizeof(3));
+                } else if (strcmp(a->getTipo(), "premium") == 0) {
+                    archivo.write(reinterpret_cast<char*>(5), sizeof(5));
+                }
+                ////
+                for (const auto& nota : a->getNotas()) {
+                    archivo.write(reinterpret_cast<char*>(&nota), sizeof(nota));
+                }
+            archivo.close();
+        }
+        vector<Alumno*> CursoSys::addAprobo() {
+        vector<Alumno*> aprobados;
+            for (const auto& a : alumnos) {
+                if (a->checkAprobo()) {
+                    aprobados.push_back(a);
+                }
+            }
+            return aprobados;
+        }
+        void CursoSys::cambiarPlan(Alumno* al, const char* plan) {
+            if ( strcmp(al.getTipo(), "invitado") == 0 ) {
+                if ( strcmp(plan, "medio") == 0 ) {
+                    new Medio(al.getCod(), al.getNya(), {});
+                } else if ( strcmp(plan, "premium") == 0 ) {
+                    new Premium(al.getCod(), al.getNya(), {});
+                }
+            }
+        }
+        vector<Alumno*> CursoSys::getAlumnoMejorProm() {
+            int max = 0;
+            vector<Alumno*> alumnosmejoresprom;
+            for(const auto& al : alumnos) {
+                int aux = al->calcularProm();
+                if(aux > max) {
+                    max = aux;
+                    alumnosmejoresprom.clear();
+                    alumnosmejoresprom.push_back(al);
+                } else if (aux == max) {
+                    alumnosmejoresprom.push_back(al);
+                }
+            }
+            alumnosmejoresprom.resize(5);
+        }
+        map<string,int> CursoSys::getCantAlumnosXTipo() {
+            map<string, int> cantidadalumnos;
+            for( const auto& a : alumnos ) {
+                cantidadalumnos[a->getTipo()]++;
+            }
+            return cantidadalumnos;
+        }
 };
-
-void CursoSys::addAlumno(Alumno* a) {
-    alumnos.push_back(a);
-}
-
-void CursoSys::guardarAlumno(char* NombA) {
-    ofstream archivo;
-    archivo.open(NombA,ios::binary);
-    if(archivo.fail()){
-        return;
-    }
-    for (  auto& a : alumnos ) {
-        archivo.write(a->getTipo(), strlen(a->getTipo()) +1);
-        archivo.write(reinterpret_cast< char*>(a->getCod()), sizeof(a->getCod()));
-        archivo.write(a->getNya(),sizeof(a->getNya()));
-        ////
-        //OPCIONAL, DICE LA CANTIDAD DE NOTAS QUE HAY DEPENDIEDO EL TIPO DEL ALUMNO
-        if(strcmp(a->getTipo(), "invitado") == 0 ) {
-            archivo.write(reinterpret_cast<char*>(1), sizeof(1));
-        } else if (strcmp(a->getTipo(), "medio") == 0) {
-            archivo.write(reinterpret_cast<char*>(3), sizeof(3));
-        } else if (strcmp(a->getTipo(), "premium") == 0) {
-            archivo.write(reinterpret_cast<char*>(5), sizeof(5));
-        }
-        ////
-        for (  auto& nota : a->getNotas()) {
-        archivo.write(reinterpret_cast< char*>(&nota), sizeof(nota));
-        }
-    }
-    archivo.close();
-}
-
-vector<Alumno*> CursoSys::addAprobo() {
-    vector<Alumno*> aprobados;
-    for ( auto& a : alumnos) {
-        if (a->checkAprobo()) {
-            aprobados.push_back(a);
-        }
-    }
-    return aprobados;
-}
-
-void CursoSys::cambiarPlan(Alumno& al,  char* plan) {
-    if ( strcmp(al.getTipo(), "invitado") == 0 ) {
-        if ( strcmp(plan, "medio") == 0 ) {
-            new Medio(al.getCod(), al.getNya(), {});
-        } else if ( strcmp(plan, "premium") == 0 ) {
-            new Premium(al.getCod(), al.getNya(), {});
-        }
-    }
-}
-
-vector<Alumno*> CursoSys::getAlumnoMejorProm() {
-    int max = 0;
-    vector<Alumno*> alumnosmejoresprom;
-    for( auto& al : alumnos) {
-        int aux = al->calcularProm();
-        if(aux > max) {
-            max = aux;
-            alumnosmejoresprom.clear();
-            alumnosmejoresprom.push_back(al);
-        } else if (aux == max) {
-            alumnosmejoresprom.push_back(al);
-        }
-    }
-    alumnosmejoresprom.resize(5);
-    return alumnosmejoresprom;
-}
-
-map<string,int> CursoSys::getCantAlumnosXTipo() {
-    map<string, int> cantidadalumnos;
-    for(  auto& a : alumnos ) {
-        cantidadalumnos[a->getTipo()]++;
-    }
-    return cantidadalumnos;
-}
 
 int main() {
     /*
