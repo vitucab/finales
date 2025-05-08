@@ -35,6 +35,17 @@ class Videojuego : public Producto {
         bool esVideojuego() const override {
             return true;
         }
+		vector<Parche*> getParches() {
+			return parches;
+		}
+		void addParche(Parche* parchesito){
+			for(const auto& p : parches) {
+				if (parchesito->getPadre() == p) {
+					parches.push_back(parchesito);
+				}
+			}
+		}
+	}
 };
 
 class Parche : public Producto {
@@ -48,19 +59,22 @@ class Parche : public Producto {
         bool esVideojuego() const override {
             return false;
         }
+		void addDependencia(Producto* padre){
+			this->padre = padre;
+		}
 };
 
 class Gestor {
     private:
         vector<Producto*>productos;
     public:
-        void addVideojuego(Videojuego* nuevo) {
+        void addProducto(Producto* nuevo) {
             productos.push_back(nuevo);
         }
-        void addParche(Parche* nuevo) {
-            productos.push_back(nuevo);
-            nuevo->getPadre()->addParche(nuevo);
-        }
+		vector<Producto*> getParchesDeUnVJ(Videojuego* videogame){
+			Videojuego* vj = dynamic_cast<Videojuego*>(videogame);
+			return vj->getParches();
+		}
         void guardarBinario(string dir){
             ofstream archivo (dir, ios::binary | ios::app);
             if(archivo.fail()){
